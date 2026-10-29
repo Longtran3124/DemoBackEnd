@@ -40,5 +40,20 @@ public class ProductOfferingServiceIml implements ProductOfferingService {
         return productOfferingRepo.findByNameContainingAndPrice(name, price);
     }
 
+    @Override
+    public ProductOffering createProductOffering(ProductOffering productOffering) {
+        if (productOffering.getId() != null) {
+            throw new RuntimeException("Khong duoc phep truyen id vao");
+        }
+        return productOfferingRepo.save(productOffering);
+    }
+
+    @Override
+    public ProductOffering updateProductOffering(Long id, ProductOffering productOffering) {
+        getById(id);
+        productOffering.setId(id);
+        return productOfferingRepo.save(productOffering);
+    }
+
 
 }

@@ -4,8 +4,7 @@ import org.example.demobackend.entity.ProductOffering;
 import org.example.demobackend.service.ProductOfferingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -36,5 +35,15 @@ public class ProductOfferingController {
     @GetMapping("searchs")
     public ResponseEntity<List<ProductOffering>> findByNameContainingAndPrice(String name, Long price){
         return ResponseEntity.ok(productOfferingService.findByNameContainingAndPrice(name, price));
+    }
+
+    @PostMapping("productss")
+    public ResponseEntity<ProductOffering> create(@RequestBody ProductOffering productOffering){
+        return ResponseEntity.ok(productOfferingService.createProductOffering(productOffering));
+    }
+
+    @PutMapping("productss/{id}")
+    public ResponseEntity<ProductOffering> update(@PathVariable Long id, @RequestBody ProductOffering productOffering){
+        return ResponseEntity.ok(productOfferingService.updateProductOffering(id, productOffering));
     }
 }
