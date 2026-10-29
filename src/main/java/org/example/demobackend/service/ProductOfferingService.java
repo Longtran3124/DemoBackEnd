@@ -13,4 +13,8 @@ public interface ProductOfferingService {
     List<ProductOffering> findByNameContaining(String name);
 
     List<ProductOffering> findByNameContainingAndPrice(String name, Long price);
+
+    ProductOffering createProductOffering(ProductOffering productOffering);
+
+    ProductOffering updateProductOffering(Long id, ProductOffering productOffering);
 }
