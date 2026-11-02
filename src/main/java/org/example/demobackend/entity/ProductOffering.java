@@ -1,5 +1,6 @@
 package org.example.demobackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -8,6 +9,7 @@ import lombok.Setter;
 import org.example.demobackend.common.StatusEnum;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Entity
 @Table(name = "product_offerings")
@@ -19,7 +21,7 @@ public class ProductOffering implements Serializable {
 
     @Id // đánh dấu nó là khóa chính (primary key)
     @Column(name = "id") // đặt column để nó tham chiếu đến db
-    @GeneratedValue(                                strategy =  GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // nên để kiểu wrapper
 
     @Column(name = "name")
@@ -35,6 +37,18 @@ public class ProductOffering implements Serializable {
     //@Enumerated(EnumType.STRING) -> nó sẽ lưu xuống DB là ACTIVE hoặc INACTIVE
     //@Enumerated(EnumType.ORDINAL) -> nó sẽ lưu xuống DB là 0 hoặc 1
     // lưu theo kiểu chuỗi thì đổi kiểu dữ liệu về String và ở db đổi status sang vacher
-    @Enumerated(EnumType.ORDINAL)
+    @Enumerated(EnumType.STRING)
     private StatusEnum statusEnum;
+
+    @OneToMany(mappedBy = "productOffering") // dùng để tham chiếu ngược lại
+    private List<ProductOfferingDetail> productOfferingDetails;
+
+//    // relationship with productDetail
+//    //@OneToOne(fetch = FetchType.EAGER) // nó sẽ lấy cả 2 bảng productOffering và ProductDetal dù có muốn hay k
+////    @OneToOne(fetch = FetchType.LAZY) // khi nào cần thì nó mới lấy bảng productDetail
+////    @OneToOne
+//    @ManyToOne // nhiều productOffering thuộc về 1 productDetail
+//    @JoinColumn(name = "detail_id", referencedColumnName = "id")
+////    @JsonIgnore // không trả về productDetail
+//    private ProductDetail productDetail;
 }

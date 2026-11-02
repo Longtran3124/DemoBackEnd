@@ -1,5 +1,7 @@
 package org.example.demobackend.service.iml;
 
+import org.example.demobackend.common.StatusEnum;
+import org.example.demobackend.dto.request.ProductOfferingCreateReq;
 import org.example.demobackend.entity.ProductOffering;
 import org.example.demobackend.repository.ProductOfferingRepo;
 import org.example.demobackend.service.ProductOfferingService;
@@ -41,18 +43,40 @@ public class ProductOfferingServiceIml implements ProductOfferingService {
     }
 
     @Override
-    public ProductOffering createProductOffering(ProductOffering productOffering) {
-        if (productOffering.getId() != null) {
-            throw new RuntimeException("Khong duoc phep truyen id vao");
+    public ProductOffering createProductOffering(ProductOfferingCreateReq request) {
+        if (request.getName() == null || request.getColor() == null || request.getPrice() == null) {
+            throw new RuntimeException("Chua dien day du thong tin");
         }
+
+        ProductOffering productOffering = new ProductOffering();
+        productOffering.setName(request.getName());
+        productOffering.setColor(request.getColor());
+        productOffering.setPrice(request.getPrice());
+        productOffering.setStatusEnum(StatusEnum.ACTIVE);
+
         return productOfferingRepo.save(productOffering);
     }
+
+
+//    @Override
+//    public ProductOffering createProductOffering(ProductOffering productOffering) {
+//        if (productOffering.getId() != null) {
+//            throw new RuntimeException("Khong duoc phep truyen id vao");
+//        }
+
+//        return productOfferingRepo.save(productOffering);
+//    }
 
     @Override
     public ProductOffering updateProductOffering(Long id, ProductOffering productOffering) {
         getById(id);
         productOffering.setId(id);
         return productOfferingRepo.save(productOffering);
+    }
+
+    @Override
+    public List<ProductOffering> findByBrandAndStatus(String brand, StatusEnum status) {
+        return productOfferingRepo.findByBrandAndStatus(brand, status);
     }
 
 
