@@ -16,11 +16,11 @@ public interface ProductOfferingService {
 
     List<ProductOffering> findByNameContainingAndPrice(String name, Long price);
 
-//    ProductOffering createProductOffering(ProductOffering productOffering);
-
     ProductOffering createProductOffering(ProductOfferingCreateReq request);
 
     ProductOffering updateProductOffering(Long id, ProductOffering productOffering);
 
     List<ProductOffering> findByBrandAndStatus(String brand, StatusEnum status);
+
+    List<ProductOffering> filter(String name, Long minPrice, Long maxPrice, String color, String status);
 }

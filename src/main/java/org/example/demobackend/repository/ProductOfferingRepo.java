@@ -33,4 +33,5 @@ public interface ProductOfferingRepo extends JpaRepository<ProductOffering, Long
     // Param nối tham số của method với chỗ :tên trong câu query
     List<ProductOffering> findByBrandAndStatus(@Param("brand") String brand,
                                                @Param("status") StatusEnum status);
+
 }

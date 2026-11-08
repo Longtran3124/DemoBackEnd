@@ -1,0 +1,236 @@
+# NOTE – SQL cho project DemoBackEnd
+
+## 1. Thông tin kết nối (theo `application.yaml`)
+
+| Mục       | Giá trị                                  |
+|-----------|------------------------------------------|
+| Database  | MySQL                                    |
+| URL       | `jdbc:mysql://localhost:3306/products`   |
+| Username  | `root`                                   |
+| Password  | `123456`                                 |
+| Port app  | `8081`                                   |
+
+> Lưu ý: project **không** bật `ddl-auto`, nên Hibernate không tự tạo bảng.
+> Trên laptop mới phải chạy SQL ở mục 3 trước khi start app.
+> Nếu mật khẩu MySQL trên laptop khác `123456` thì sửa lại trong `application.yaml`.
+
+## 2. Sơ đồ bảng
+
+```
+product_offerings (1) ──< product_offering_detail >── (1) product_details
+        id  <───────────── product_offering_id
+                           product_detail_id ─────────────>  id
+```
+
+- `product_offerings`        ↔ entity `ProductOffering`
+- `product_details`          ↔ entity `ProductDetail`
+- `product_offering_detail`  ↔ entity `ProductOfferingDetail` (bảng trung gian, quan hệ N-N)
+- Cột `status` lưu chữ `ACTIVE` / `INACTIVE` vì entity dùng `@Enumerated(EnumType.STRING)`
+
+## 3. Script tạo database + bảng
+
+```sql
+CREATE DATABASE IF NOT EXISTS products
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE products;
+
+-- Xóa theo thứ tự ngược (bảng trung gian trước) để không vướng khóa ngoại
+DROP TABLE IF EXISTS product_offering_detail;
+DROP TABLE IF EXISTS product_details;
+DROP TABLE IF EXISTS product_offerings;
+
+-- Bảng product_offerings (entity ProductOffering)
+CREATE TABLE product_offerings (
+    id      BIGINT       NOT NULL AUTO_INCREMENT,
+    name    VARCHAR(255) NULL,
+    price   BIGINT       NULL,
+    color   VARCHAR(255) NULL,
+    status  VARCHAR(20)  NULL COMMENT 'ACTIVE | INACTIVE',
+    PRIMARY KEY (id)
+) ENGINE = InnoDB;
+
+-- Bảng product_details (entity ProductDetail)
+CREATE TABLE product_details (
+    id       BIGINT       NOT NULL AUTO_INCREMENT,
+    weight   VARCHAR(255) NULL,
+    feature  VARCHAR(255) NULL,
+    power    VARCHAR(255) NULL,
+    brand    VARCHAR(255) NULL,
+    image    VARCHAR(255) NULL,
+    video    VARCHAR(255) NULL,
+    PRIMARY KEY (id)
+) ENGINE = InnoDB;
+
+-- Bảng trung gian product_offering_detail (entity ProductOfferingDetail)
+CREATE TABLE product_offering_detail (
+    id                   BIGINT NOT NULL AUTO_INCREMENT,
+    product_offering_id  BIGINT NULL,
+    product_detail_id    BIGINT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_pod_offering FOREIGN KEY (product_offering_id) REFERENCES product_offerings (id),
+    CONSTRAINT fk_pod_detail   FOREIGN KEY (product_detail_id)   REFERENCES product_details (id)
+    -- Tùy chọn: chặn gán trùng 1 detail vào cùng 1 offering
+    -- , CONSTRAINT uk_pod_offering_detail UNIQUE (product_offering_id, product_detail_id)
+) ENGINE = InnoDB;
+```
+
+## 4. Dữ liệu mẫu (không bắt buộc)
+
+```sql
+INSERT INTO product_offerings (name, price, color, status) VALUES
+    ('iPhone 15',          25000000, 'Black', 'ACTIVE'),
+    ('Samsung Galaxy S24', 22000000, 'White', 'ACTIVE'),
+    ('Xiaomi 14',          15000000, 'Blue',  'INACTIVE');
+
+INSERT INTO product_details (weight, feature, power, brand, image, video) VALUES
+    ('171g', 'Dynamic Island', '3349mAh', 'Apple',   'iphone15.png', 'iphone15.mp4'),
+    ('167g', 'Galaxy AI',      '4000mAh', 'Samsung', 's24.png',      's24.mp4'),
+    ('193g', 'Leica camera',   '4610mAh', 'Xiaomi',  'xiaomi14.png', 'xiaomi14.mp4');
+
+INSERT INTO product_offering_detail (product_offering_id, product_detail_id) VALUES
+    (1, 1),
+    (2, 2),
+    (3, 3),
+    (1, 2);
+```
+
+## 5. Câu query hay dùng (tương ứng với `ProductOfferingRepo`)
+
+```sql
+-- findByNameContaining
+SELECT * FROM product_offerings WHERE name LIKE '%iphone%';
+
+-- findByNameContainingAndPrice
+SELECT * FROM product_offerings WHERE name LIKE '%iphone%' AND price = 25000000;
+
+-- findByDetailId: các offering gắn với 1 product_detail
+SELECT * FROM product_offerings
+WHERE id IN (SELECT product_offering_id FROM product_offering_detail WHERE product_detail_id = 1);
+
+-- findByBrandAndStatus: offering có ít nhất 1 detail thuộc brand + đúng status
+SELECT DISTINCT po.*
+FROM product_offerings po
+JOIN product_offering_detail pod ON pod.product_offering_id = po.id
+JOIN product_details pd          ON pod.product_detail_id   = pd.id
+WHERE pd.brand = 'Samsung' AND po.status = 'ACTIVE';
+
+-- Xem offering kèm toàn bộ detail
+SELECT po.id, po.name, po.status, pd.brand, pd.weight, pd.power
+FROM product_offerings po
+LEFT JOIN product_offering_detail pod ON pod.product_offering_id = po.id
+LEFT JOIN product_details pd          ON pd.id = pod.product_detail_id
+ORDER BY po.id;
+```
+
+## 6. SQL tương ứng với từng API (Hibernate chạy ngầm bên dưới)
+
+> Bật `logging.level.org.hibernate.SQL: DEBUG` là thấy các câu này trong console.
+> Dấu `?` trong log = tham số; ở đây đã thay bằng giá trị ví dụ.
+
+### 6.1. ProductOffering – `ProductOfferingController`
+
+**GET `/products/{id}`** → `getById` → `productOfferingRepo.findById(id)`
+```sql
+SELECT * FROM product_offerings WHERE id = 1;
+-- Khi trả JSON, Jackson đọc productOfferingDetails (LAZY) nên Hibernate chạy thêm:
+SELECT pod.*, pd.*
+FROM product_offering_detail pod
+LEFT JOIN product_details pd ON pd.id = pod.product_detail_id
+WHERE pod.product_offering_id = 1;
+```
+
+**GET `/getAll`** → `findAll()`
+```sql
+SELECT * FROM product_offerings;
+-- + mỗi offering lại 1 câu lấy product_offering_detail như trên (vấn đề N+1 query)
+```
+
+**GET `/search?name=iphone`** → `findByNameContaining`
+```sql
+SELECT * FROM product_offerings WHERE name LIKE '%iphone%';
+```
+
+**GET `/searchs?name=iphone&price=25000000`** → `findByNameContainingAndPrice`
+```sql
+SELECT * FROM product_offerings WHERE name LIKE '%iphone%' AND price = 25000000;
+```
+
+**POST `/productss`** → `createProductOffering` (status luôn = ACTIVE)
+```json
+{ "name": "iPhone 16", "price": 30000000, "color": "Pink" }
+```
+```sql
+INSERT INTO product_offerings (name, price, color, status)
+VALUES ('iPhone 16', 30000000, 'Pink', 'ACTIVE');
+```
+
+**PUT `/productss/{id}`** → `updateProductOffering`
+```json
+{ "name": "iPhone 16 Pro", "price": 32000000, "color": "Gold", "statusEnum": "INACTIVE" }
+```
+```sql
+SELECT * FROM product_offerings WHERE id = 4;   -- getById(): kiểm tra tồn tại
+SELECT * FROM product_offerings WHERE id = 4;   -- save() -> merge(): load bản cũ để so sánh
+UPDATE product_offerings
+SET name = 'iPhone 16 Pro', price = 32000000, color = 'Gold', status = 'INACTIVE'
+WHERE id = 4;
+```
+> ⚠️ Field nào **không gửi** trong body sẽ bị UPDATE thành `NULL` (vì save cả object).
+
+**GET `/products/by-brand?brand=Samsung&status=ACTIVE`** → `findByBrandAndStatus`
+```sql
+SELECT po.*
+FROM product_offerings po
+JOIN product_offering_detail pod ON pod.product_offering_id = po.id
+JOIN product_details pd          ON pod.product_detail_id   = pd.id
+WHERE pd.brand = 'Samsung' AND po.status = 'ACTIVE';
+```
+
+### 6.2. ProductDetail – `ProductDetailController`
+
+**GET `/product-detail`** → `findAll()`
+```sql
+SELECT * FROM product_details;
+```
+
+**POST `/product-detail`** → `create` (bắt buộc có weight, feature)
+```json
+{ "weight": "199g", "feature": "Camera Control", "power": "3561mAh",
+  "brand": "Apple", "image": "iphone16.png", "video": "iphone16.mp4" }
+```
+```sql
+INSERT INTO product_details (weight, feature, power, brand, image, video)
+VALUES ('199g', 'Camera Control', '3561mAh', 'Apple', 'iphone16.png', 'iphone16.mp4');
+```
+
+### 6.3. Gán detail cho offering – `ProductOfferingDetailController`
+
+**POST `/assign-product-detail`** → `assignProductDetail`
+```json
+{ "productOfferingId": 4, "productDetailIds": [1, 4] }
+```
+```sql
+SELECT * FROM product_offerings WHERE id = 4;          -- findById: kiểm tra offering tồn tại
+SELECT * FROM product_details   WHERE id IN (1, 4);    -- findAllById: lấy các detail
+INSERT INTO product_offering_detail (product_offering_id, product_detail_id) VALUES (4, 1);
+INSERT INTO product_offering_detail (product_offering_id, product_detail_id) VALUES (4, 4);
+-- saveAll() chạy từng INSERT một, mỗi detail 1 dòng
+```
+
+### 6.4. Kiểm tra lại sau khi gọi API
+```sql
+SELECT po.id, po.name, po.status, pd.id AS detail_id, pd.brand, pd.feature
+FROM product_offerings po
+LEFT JOIN product_offering_detail pod ON pod.product_offering_id = po.id
+LEFT JOIN product_details pd          ON pd.id = pod.product_detail_id
+WHERE po.id = 4;
+```
+
+## 7. Cách chạy trên laptop
+
+1. Cài MySQL 8 (đặt user `root` / mật khẩu `123456`, hoặc sửa lại `application.yaml`).
+2. Mở MySQL Workbench / DBeaver, copy mục 3 (và mục 4 nếu muốn có dữ liệu mẫu) rồi bấm Execute.
+   Hoặc dùng dòng lệnh: lưu SQL ra file `schema.sql` rồi chạy `mysql -u root -p < schema.sql`.
+3. `git clone https://github.com/Longtran3124/DemoBackEnd.git` rồi chạy app, gọi API ở `http://localhost:8081`.

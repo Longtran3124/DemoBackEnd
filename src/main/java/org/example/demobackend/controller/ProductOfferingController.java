@@ -16,6 +16,18 @@ public class ProductOfferingController {
     @Autowired
     private ProductOfferingService productOfferingService;
 
+    @GetMapping("/filter")
+    // RequestParam -> mục đích để truyền các dữ liệu này vào tham số của api
+    // required = false -> bắt buộc dữ liệu truyền vào không được để trống
+    public ResponseEntity<List<ProductOffering>> filter(@RequestParam(name = "name", required = false) String name,
+                                                        @RequestParam(name = "minPrice", required = false) Long minPrice,
+                                                        @RequestParam(name = "maxPrice", required = false) Long maxPrice,
+                                                        @RequestParam(name = "color", required = false) String color,
+                                                        @RequestParam(name = "status", required = false) String status){
+        List<ProductOffering> productOfferingList = productOfferingService.filter(name, minPrice, maxPrice, color, status);
+        return ResponseEntity.ok(productOfferingList);
+    }
+
     @GetMapping("/products/{id}")
     // class ResponseEntity dùng để trả dữ liệu về
     public ResponseEntity<ProductOffering> getById(@PathVariable Long id){
@@ -38,10 +50,6 @@ public class ProductOfferingController {
         return ResponseEntity.ok(productOfferingService.findByNameContainingAndPrice(name, price));
     }
 
-//    @PostMapping("productss")
-//    public ResponseEntity<ProductOffering> create(@RequestBody ProductOffering productOffering){
-//        return ResponseEntity.ok(productOfferingService.createProductOffering(productOffering));
-//    }
 
     @PostMapping("productss")
     public ResponseEntity<ProductOffering> create(@RequestBody ProductOfferingCreateReq request){

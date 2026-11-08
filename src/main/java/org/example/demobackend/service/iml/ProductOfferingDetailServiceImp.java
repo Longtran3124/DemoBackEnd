@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,11 +30,14 @@ public class ProductOfferingDetailServiceImp implements ProductOfferingDetailSer
 
     @Override
     public ProductOffering assignProductDetail(AssignProductDetailReq request) {
+
+        List<Long> productDetailIds = new LinkedList<>(request.getProductDetailIds());
+
         // validate data
         if (request.getProductOfferingId() == null) {
             throw new RuntimeException("ProductOfferingId not null");
         }
-        if (request.getProductDetailIds() == null || request.getProductDetailIds().isEmpty()) {
+        if (request.getProductDetailIds() == null || productDetailIds.isEmpty()) {
             throw new RuntimeException("productDetailIds not null and not empty");
         }
 
@@ -44,7 +48,7 @@ public class ProductOfferingDetailServiceImp implements ProductOfferingDetailSer
 
         ProductOffering productOffering = productOfferingOptinal.get();
 
-        List<ProductDetail> productDetails = productDetailRepo.findAllById(request.getProductDetailIds());
+        List<ProductDetail> productDetails = productDetailRepo.findAllById(productDetailIds);
         if (productDetails.isEmpty()) {
             throw new RuntimeException("productDetails not exists");
         }
@@ -56,6 +60,7 @@ public class ProductOfferingDetailServiceImp implements ProductOfferingDetailSer
             productOfferingDetail.setProductOffering(productOfferingOptinal.get());
             productOfferingDetail.setProductDetail(productDetails.get(i));
 
+            productOfferingDetailRepo.delete(productOfferingDetail);
             productOfferingDetails.add(productOfferingDetail);
         }
 
