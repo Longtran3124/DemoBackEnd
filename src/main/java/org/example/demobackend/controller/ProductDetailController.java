@@ -20,12 +20,14 @@ public class ProductDetailController {
     @Autowired
     private ProductDetailService productDetailService;
 
+    // GET http://localhost:8081/product-detail
     @GetMapping("/product-detail")
     public ResponseEntity<List<ProductDetail>> getAll() {
         List<ProductDetail> productDetails = productDetailService.getAll();
         return ResponseEntity.ok(productDetails);
     }
 
+    // POST http://localhost:8081/product-detail   (body: ProductDetailCreateReq)
     @PostMapping("/product-detail")
     public ResponseEntity<ProductDetail> create(@RequestBody ProductDetailCreateReq request) {
         ProductDetail productDetail = productDetailService.create(request);
