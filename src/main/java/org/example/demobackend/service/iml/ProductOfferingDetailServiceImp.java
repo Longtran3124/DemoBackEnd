@@ -1,5 +1,6 @@
 package org.example.demobackend.service.iml;
 
+import lombok.RequiredArgsConstructor;
 import org.example.demobackend.dto.request.AssignProductDetailReq;
 import org.example.demobackend.entity.ProductDetail;
 import org.example.demobackend.entity.ProductOffering;
@@ -17,16 +18,17 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ProductOfferingDetailServiceImp implements ProductOfferingDetailService {
 
-    @Autowired
-    private ProductOfferingDetailRepo productOfferingDetailRepo;
+//    @Autowired
+    private final ProductOfferingDetailRepo productOfferingDetailRepo;
 
-    @Autowired
-    private ProductOfferingRepo productOfferingRepo;
+//    @Autowired
+    private final ProductOfferingRepo productOfferingRepo;
 
-    @Autowired
-    private ProductDetailRepo productDetailRepo;
+//    @Autowired
+    private final ProductDetailRepo productDetailRepo;
 
     @Override
     public ProductOffering assignProductDetail(AssignProductDetailReq request) {

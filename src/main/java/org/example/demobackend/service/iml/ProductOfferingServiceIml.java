@@ -7,6 +7,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.example.demobackend.common.StatusEnum;
 import org.example.demobackend.dto.request.ProductOfferingCreateReq;
 import org.example.demobackend.entity.ProductOffering;
@@ -20,14 +21,15 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ProductOfferingServiceIml implements ProductOfferingService {
 
     // hàm này cho phép mình build các câu query động
-    @PersistenceContext
-    private EntityManager entityManager;
+//    @PersistenceContext
+    private final EntityManager entityManager;
 
-    @Autowired // thay vì phải new thì dùng Autowired
-    private ProductOfferingRepo productOfferingRepo;
+//    @Autowired // thay vì phải new thì dùng Autowired
+    private final ProductOfferingRepo productOfferingRepo;
 
     @Override
     public ProductOffering getById(Long id) {
@@ -93,7 +95,7 @@ public class ProductOfferingServiceIml implements ProductOfferingService {
 
         List<Predicate> predicates = new ArrayList<>();
 
-        // dk name khác null và name khác để trống
+        // dk name khác null và name k dc để trống
         if (name != null && !name.isEmpty()) {
             Predicate predicate = criteriaBuilder.like(root.get("name"), "%" + name + "%");
             predicates.add(predicate);
@@ -115,8 +117,6 @@ public class ProductOfferingServiceIml implements ProductOfferingService {
         }
 
         if (status != null && !status.isEmpty()) {
-            // field trong entity tên là "statusEnum" (không phải "status" - đó là tên cột DB)
-            // và kiểu dữ liệu là enum nên phải convert String -> StatusEnum
             Predicate predicate = criteriaBuilder.equal(root.get("statusEnum"), StatusEnum.valueOf(status));
             predicates.add(predicate);
         }
